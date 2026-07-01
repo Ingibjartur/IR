@@ -97,39 +97,39 @@
   <script>
   (function() {
     function parseAndHighlight() {
-      var rows = document.querySelectorAll('#scheduleWidget li.match');
+      var rows = document.querySelectorAll('#scheduleWidget table.scheduletable tbody tr');
       if (!rows.length) return false;
 
       var now = new Date();
       var matches = [];
 
       rows.forEach(function(row) {
-        var dateEl = row.querySelector('.ml_pvm');
-        var timeEl = row.querySelector('.ml_tuloklo');
-        var homeEl = row.querySelector('.ml_kotisiisti');
-        var awayEl = row.querySelector('.ml_vierassiisti');
-        var pitchEl = row.querySelector('.ml_kenttanimi');
+        var dateEl = row.querySelector('td.date');
+        var timeEl = row.querySelector('td.time');
+        var homeEl = row.querySelector('td.home');
+        var awayEl = row.querySelector('td.away');
+        var pitchEl = row.querySelector('td.pitch');
+        var scoreEl = row.querySelector('td.score');
         if (!dateEl || !timeEl) return;
 
-        var dateText = dateEl.textContent.trim();
-        var timeText = timeEl.textContent.trim();
+        // skip if a real score is present (anything other than a bare dash means played)
+        var scoreText = scoreEl ? scoreEl.textContent.trim() : '';
+        if (scoreText && scoreText !== '-' && scoreText !== '–') return;
 
+        var dateText = dateEl.textContent.trim(); // "01.07.2026"
+        var timeText = timeEl.textContent.trim(); // "17:00"
+
+        var dateMatch = dateText.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
         var timeMatch = timeText.match(/^(\d{1,2}):(\d{2})$/);
-        if (!timeMatch) return; // already played or unrecognized format
-
-        var dateMatch = dateText.match(/^(\d{1,2})\.(\d{1,2})\.?$/);
-        if (!dateMatch) return;
+        if (!dateMatch || !timeMatch) return;
 
         var day = parseInt(dateMatch[1], 10);
         var month = parseInt(dateMatch[2], 10) - 1;
+        var year = parseInt(dateMatch[3], 10);
         var hour = parseInt(timeMatch[1], 10);
         var minute = parseInt(timeMatch[2], 10);
-        var year = now.getFullYear();
 
         var kickoff = new Date(year, month, day, hour, minute);
-        if (kickoff < now && (now - kickoff) > 60 * 24 * 60 * 60 * 1000) {
-          kickoff = new Date(year + 1, month, day, hour, minute);
-        }
 
         matches.push({
           kickoff: kickoff,
@@ -160,10 +160,19 @@
     }
 
     if (!parseAndHighlight()) {
+      var target = document.getElementById('scheduleWidget');
+      var observer = new MutationObserver(function() {
+        if (parseAndHighlight()) observer.disconnect();
+      });
+      observer.observe(target, { childList: true, subtree: true });
+
       var attempts = 0;
       var interval = setInterval(function() {
         attempts++;
-        if (parseAndHighlight() || attempts > 25) clearInterval(interval);
+        if (parseAndHighlight() || attempts > 100) {
+          clearInterval(interval);
+          observer.disconnect();
+        }
       }, 200);
     }
   })();
