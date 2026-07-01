@@ -1,9 +1,179 @@
 <!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><title>ÍR 3 - Leikir</title></head>
+<html lang="is">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ÍR 3 - Leikir</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    min-height: 100vh;
+    padding: 24px 16px;
+    color: #1a1a1a;
+  }
+  .wrap {
+    max-width: 460px;
+    margin: 0 auto;
+  }
+  header {
+    text-align: center;
+    color: #ffffff;
+    margin-bottom: 20px;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 28px;
+    letter-spacing: 0.5px;
+  }
+  header p {
+    margin: 4px 0 0;
+    opacity: 0.75;
+    font-size: 14px;
+  }
+  .next-match {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 18px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    border-left: 5px solid #e63946;
+  }
+  .next-match .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #e63946;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .next-match .teams {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .next-match .meta {
+    font-size: 13px;
+    color: #555;
+  }
+  .card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 18px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    overflow-x: auto;
+  }
+  .card h2 {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #555;
+    margin: 0 0 10px;
+  }
+</style>
+</head>
 <body>
-<div style='width:400px'><script charset='utf-8' src='https://n1motid.torneopal.com/taso/widget.php?teamid=172856&widget=schedule'></script></div>
-<div style='width:400px'><script charset='utf-8' src='https://n1motid.torneopal.com/taso/widget.php?competition=320_0013&class=2004&group=8&widget=scoretable'></script></div>
+<div class="wrap">
+
+  <header>
+    <h1>ÍR 3</h1>
+    <p>N1-mótið 2026</p>
+  </header>
+
+  <div class="next-match" id="nextMatchBox">
+    <div class="label">Næsti leikur</div>
+    <div class="teams" id="nmTeams">Leita að næsta leik...</div>
+    <div class="meta" id="nmMeta"></div>
+  </div>
+
+  <div class="card">
+    <h2>Leikir</h2>
+    <div style='width:100%' id="scheduleWidget"><script charset='utf-8' src='https://n1motid.torneopal.com/taso/widget.php?teamid=172856&widget=schedule'></script></div>
+  </div>
+
+  <script>
+  (function() {
+    function parseAndHighlight() {
+      var rows = document.querySelectorAll('#scheduleWidget li.match');
+      if (!rows.length) return false;
+
+      var now = new Date();
+      var matches = [];
+
+      rows.forEach(function(row) {
+        var dateEl = row.querySelector('.ml_pvm');
+        var timeEl = row.querySelector('.ml_tuloklo');
+        var homeEl = row.querySelector('.ml_kotisiisti');
+        var awayEl = row.querySelector('.ml_vierassiisti');
+        var pitchEl = row.querySelector('.ml_kenttanimi');
+        if (!dateEl || !timeEl) return;
+
+        var dateText = dateEl.textContent.trim();
+        var timeText = timeEl.textContent.trim();
+
+        var timeMatch = timeText.match(/^(\d{1,2}):(\d{2})$/);
+        if (!timeMatch) return; // already played or unrecognized format
+
+        var dateMatch = dateText.match(/^(\d{1,2})\.(\d{1,2})\.?$/);
+        if (!dateMatch) return;
+
+        var day = parseInt(dateMatch[1], 10);
+        var month = parseInt(dateMatch[2], 10) - 1;
+        var hour = parseInt(timeMatch[1], 10);
+        var minute = parseInt(timeMatch[2], 10);
+        var year = now.getFullYear();
+
+        var kickoff = new Date(year, month, day, hour, minute);
+        if (kickoff < now && (now - kickoff) > 60 * 24 * 60 * 60 * 1000) {
+          kickoff = new Date(year + 1, month, day, hour, minute);
+        }
+
+        matches.push({
+          kickoff: kickoff,
+          home: homeEl ? homeEl.textContent.trim() : '',
+          away: awayEl ? awayEl.textContent.trim() : '',
+          pitch: pitchEl ? pitchEl.textContent.trim() : ''
+        });
+      });
+
+      matches.sort(function(a, b) { return a.kickoff - b.kickoff; });
+      var next = matches.find(function(m) { return m.kickoff >= now; });
+
+      var teamsEl = document.getElementById('nmTeams');
+      var metaEl = document.getElementById('nmMeta');
+
+      if (next) {
+        teamsEl.textContent = next.home + ' - ' + next.away;
+        var dd = String(next.kickoff.getDate()).padStart(2, '0');
+        var mm = String(next.kickoff.getMonth() + 1).padStart(2, '0');
+        var hh = String(next.kickoff.getHours()).padStart(2, '0');
+        var min = String(next.kickoff.getMinutes()).padStart(2, '0');
+        metaEl.textContent = dd + '.' + mm + '.' + next.kickoff.getFullYear() + ' - ' + hh + ':' + min + (next.pitch ? ' - ' + next.pitch : '');
+      } else {
+        teamsEl.textContent = 'Engir fleiri leikir framundan';
+        metaEl.textContent = '';
+      }
+      return true;
+    }
+
+    if (!parseAndHighlight()) {
+      var attempts = 0;
+      var interval = setInterval(function() {
+        attempts++;
+        if (parseAndHighlight() || attempts > 25) clearInterval(interval);
+      }, 200);
+    }
+  })();
+  </script>
+
+  <div class="card">
+    <h2>Riðlastaða</h2>
+    <div style='width:100%'><script charset='utf-8' src='https://n1motid.torneopal.com/taso/widget.php?competition=320_0013&class=2004&group=8&widget=scoretable'></script></div>
+  </div>
+
+</div>
 </body>
 </html>
- 
