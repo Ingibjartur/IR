@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ÍR 3 - Leikir</title>
+<title>ÍR 3 - N1 mótið 2026</title>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -21,7 +21,7 @@
   header {
     text-align: center;
     color: #ffffff;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
   }
   header h1 {
     margin: 0;
@@ -33,6 +33,33 @@
     opacity: 0.75;
     font-size: 14px;
   }
+
+  .tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 18px;
+    overflow-x: auto;
+  }
+  .tab-btn {
+    flex: 1 0 auto;
+    background: rgba(255,255,255,0.12);
+    color: #ffffff;
+    border: none;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .tab-btn.active {
+    background: #ffffff;
+    color: #203a43;
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
   .next-match {
     background: #ffffff;
     border-radius: 12px;
@@ -73,6 +100,52 @@
     color: #555;
     margin: 0 0 10px;
   }
+
+  .day-block {
+    margin-bottom: 16px;
+  }
+  .day-block:last-child { margin-bottom: 0; }
+  .day-block h3 {
+    font-size: 15px;
+    margin: 0 0 6px;
+    color: #1a1a1a;
+  }
+  .meal {
+    font-size: 13px;
+    margin: 0 0 6px;
+    line-height: 1.4;
+  }
+  .meal strong {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #e63946;
+  }
+  .sched-item {
+    font-size: 13px;
+    margin: 0 0 6px;
+    line-height: 1.4;
+    display: flex;
+    gap: 8px;
+  }
+  .sched-item .time {
+    font-weight: 700;
+    white-space: nowrap;
+    min-width: 88px;
+  }
+
+  .card img {
+    width: 100%;
+    border-radius: 8px;
+    display: block;
+    margin-bottom: 10px;
+  }
+  .card p.caption {
+    font-size: 12px;
+    color: #555;
+    margin: 0 0 16px;
+  }
 </style>
 </head>
 <body>
@@ -83,106 +156,228 @@
     <p>N1-mótið 2026</p>
   </header>
 
-  <div class="next-match" id="nextMatchBox">
-    <div class="label">Næsti leikur</div>
-    <div class="teams" id="nmTeams">Leita að næsta leik...</div>
-    <div class="meta" id="nmMeta"></div>
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="leikir">Leikir</button>
+    <button class="tab-btn" data-tab="matsedill">Matseðill</button>
+    <button class="tab-btn" data-tab="dagskra">Dagskrá</button>
+    <button class="tab-btn" data-tab="vellir">Vellir</button>
   </div>
 
-  <div class="card">
-    <h2>Leikir</h2>
-    <div style='width:100%' id="scheduleWidget"><script charset='utf-8' src='https://n1motid.torneopal.com/taso/widget.php?teamid=172856&widget=schedule'></script></div>
-  </div>
+  <!-- LEIKIR TAB -->
+  <div class="tab-panel active" id="tab-leikir">
 
-  <script>
-  (function() {
-    function parseAndHighlight() {
-      var rows = document.querySelectorAll('#scheduleWidget table.scheduletable tbody tr');
-      if (!rows.length) return false;
+    <div class="next-match" id="nextMatchBox">
+      <div class="label">Næsti leikur</div>
+      <div class="teams" id="nmTeams">Leita að næsta leik...</div>
+      <div class="meta" id="nmMeta"></div>
+    </div>
 
-      var now = new Date();
-      var matches = [];
+    <div class="card">
+      <h2>Leikir</h2>
+      <div style='width:100%' id="scheduleWidget"><script charset='utf-8' src='https://n1motid.torneopal.com/taso/widget.php?teamid=172856&widget=schedule'></script></div>
+    </div>
 
-      rows.forEach(function(row) {
-        var dateEl = row.querySelector('td.date');
-        var timeEl = row.querySelector('td.time');
-        var homeEl = row.querySelector('td.home');
-        var awayEl = row.querySelector('td.away');
-        var pitchEl = row.querySelector('td.pitch');
-        var scoreEl = row.querySelector('td.score');
-        if (!dateEl || !timeEl) return;
+    <script>
+    (function() {
+      function parseAndHighlight() {
+        var rows = document.querySelectorAll('#scheduleWidget table.scheduletable tbody tr');
+        if (!rows.length) return false;
 
-        // skip if a real score is present (anything other than a bare dash means played)
-        var scoreText = scoreEl ? scoreEl.textContent.trim() : '';
-        if (scoreText && scoreText !== '-' && scoreText !== '–') return;
+        var now = new Date();
+        var matches = [];
 
-        var dateText = dateEl.textContent.trim(); // "01.07.2026"
-        var timeText = timeEl.textContent.trim(); // "17:00"
+        rows.forEach(function(row) {
+          var dateEl = row.querySelector('td.date');
+          var timeEl = row.querySelector('td.time');
+          var homeEl = row.querySelector('td.home');
+          var awayEl = row.querySelector('td.away');
+          var pitchEl = row.querySelector('td.pitch');
+          var scoreEl = row.querySelector('td.score');
+          if (!dateEl || !timeEl) return;
 
-        var dateMatch = dateText.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-        var timeMatch = timeText.match(/^(\d{1,2}):(\d{2})$/);
-        if (!dateMatch || !timeMatch) return;
+          var scoreText = scoreEl ? scoreEl.textContent.trim() : '';
+          if (scoreText && scoreText !== '-' && scoreText !== '–') return;
 
-        var day = parseInt(dateMatch[1], 10);
-        var month = parseInt(dateMatch[2], 10) - 1;
-        var year = parseInt(dateMatch[3], 10);
-        var hour = parseInt(timeMatch[1], 10);
-        var minute = parseInt(timeMatch[2], 10);
+          var dateText = dateEl.textContent.trim();
+          var timeText = timeEl.textContent.trim();
 
-        var kickoff = new Date(year, month, day, hour, minute);
+          var dateMatch = dateText.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+          var timeMatch = timeText.match(/^(\d{1,2}):(\d{2})$/);
+          if (!dateMatch || !timeMatch) return;
 
-        matches.push({
-          kickoff: kickoff,
-          home: homeEl ? homeEl.textContent.trim() : '',
-          away: awayEl ? awayEl.textContent.trim() : '',
-          pitch: pitchEl ? pitchEl.textContent.trim() : ''
+          var day = parseInt(dateMatch[1], 10);
+          var month = parseInt(dateMatch[2], 10) - 1;
+          var year = parseInt(dateMatch[3], 10);
+          var hour = parseInt(timeMatch[1], 10);
+          var minute = parseInt(timeMatch[2], 10);
+
+          var kickoff = new Date(year, month, day, hour, minute);
+
+          matches.push({
+            kickoff: kickoff,
+            home: homeEl ? homeEl.textContent.trim() : '',
+            away: awayEl ? awayEl.textContent.trim() : '',
+            pitch: pitchEl ? pitchEl.textContent.trim() : ''
+          });
         });
-      });
 
-      matches.sort(function(a, b) { return a.kickoff - b.kickoff; });
-      var next = matches.find(function(m) { return m.kickoff >= now; });
+        matches.sort(function(a, b) { return a.kickoff - b.kickoff; });
+        var next = matches.find(function(m) { return m.kickoff >= now; });
 
-      var teamsEl = document.getElementById('nmTeams');
-      var metaEl = document.getElementById('nmMeta');
+        var teamsEl = document.getElementById('nmTeams');
+        var metaEl = document.getElementById('nmMeta');
 
-      if (next) {
-        teamsEl.textContent = next.home + ' - ' + next.away;
-        var dd = String(next.kickoff.getDate()).padStart(2, '0');
-        var mm = String(next.kickoff.getMonth() + 1).padStart(2, '0');
-        var hh = String(next.kickoff.getHours()).padStart(2, '0');
-        var min = String(next.kickoff.getMinutes()).padStart(2, '0');
-        metaEl.textContent = dd + '.' + mm + '.' + next.kickoff.getFullYear() + ' - ' + hh + ':' + min + (next.pitch ? ' - ' + next.pitch : '');
-      } else {
-        teamsEl.textContent = 'Engir fleiri leikir framundan';
-        metaEl.textContent = '';
-      }
-      return true;
-    }
-
-    if (!parseAndHighlight()) {
-      var target = document.getElementById('scheduleWidget');
-      var observer = new MutationObserver(function() {
-        if (parseAndHighlight()) observer.disconnect();
-      });
-      observer.observe(target, { childList: true, subtree: true });
-
-      var attempts = 0;
-      var interval = setInterval(function() {
-        attempts++;
-        if (parseAndHighlight() || attempts > 100) {
-          clearInterval(interval);
-          observer.disconnect();
+        if (next) {
+          teamsEl.textContent = next.home + ' - ' + next.away;
+          var dd = String(next.kickoff.getDate()).padStart(2, '0');
+          var mm = String(next.kickoff.getMonth() + 1).padStart(2, '0');
+          var hh = String(next.kickoff.getHours()).padStart(2, '0');
+          var min = String(next.kickoff.getMinutes()).padStart(2, '0');
+          metaEl.textContent = dd + '.' + mm + '.' + next.kickoff.getFullYear() + ' - ' + hh + ':' + min + (next.pitch ? ' - ' + next.pitch : '');
+        } else {
+          teamsEl.textContent = 'Engir fleiri leikir framundan';
+          metaEl.textContent = '';
         }
-      }, 200);
-    }
-  })();
-  </script>
+        return true;
+      }
 
-  <div class="card">
-    <h2>Riðlastaða</h2>
-    <div style='width:100%'><script charset='utf-8' src='https://n1motid.torneopal.com/taso/widget.php?competition=320_0013&class=2004&group=8&widget=scoretable'></script></div>
+      if (!parseAndHighlight()) {
+        var target = document.getElementById('scheduleWidget');
+        var observer = new MutationObserver(function() {
+          if (parseAndHighlight()) observer.disconnect();
+        });
+        observer.observe(target, { childList: true, subtree: true });
+
+        var attempts = 0;
+        var interval = setInterval(function() {
+          attempts++;
+          if (parseAndHighlight() || attempts > 100) {
+            clearInterval(interval);
+            observer.disconnect();
+          }
+        }, 200);
+      }
+    })();
+    </script>
+
+    <div class="card">
+      <h2>Riðlastaða</h2>
+      <div style='width:100%'><script charset='utf-8' src='https://n1motid.torneopal.com/taso/widget.php?competition=320_0013&class=2004&group=8&widget=scoretable'></script></div>
+    </div>
+
+  </div>
+
+  <!-- MATSEÐILL TAB -->
+  <div class="tab-panel" id="tab-matsedill">
+    <div class="card">
+      <h2>Matseðill</h2>
+
+      <div class="day-block">
+        <h3>Alla daga</h3>
+        <p class="meal"><strong>Morgunverður</strong>Brauð, álegg, súrmjólk, morgunkorn, ávextir og fleira.</p>
+      </div>
+
+      <div class="day-block">
+        <h3>Miðvikudagur 1. júlí</h3>
+        <p class="meal"><strong>Kvöldmatur</strong>Skólabollur og meðlæti.</p>
+      </div>
+
+      <div class="day-block">
+        <h3>Fimmtudagur 2. júlí</h3>
+        <p class="meal"><strong>Hádegismatur</strong>Kjötbollur með brúnni sósu, kartöflumús og meðlæti.</p>
+        <p class="meal"><strong>Kvöldmatur</strong>Spagettí bolognese með brauðbollum og meðlæti.</p>
+      </div>
+
+      <div class="day-block">
+        <h3>Föstudagur 3. júlí</h3>
+        <p class="meal"><strong>Hádegismatur</strong>Lasagna með hrásalati, hvítlauksbrauði og meðlæti.</p>
+        <p class="meal"><strong>Kvöldmatur</strong>Grísasnitsel með kartöflum, grænum baunum, sósu og meðlæti. (Lambasnitsel fyrir þá sem ekki geta borðað svínakjöt)</p>
+      </div>
+
+      <div class="day-block">
+        <h3>Laugardagur 4. júlí</h3>
+        <p class="meal"><strong>Hádegismatur</strong>Kjúklingur með sveppasósu, hrísgrjónum og meðlæti.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- DAGSKRÁ TAB -->
+  <div class="tab-panel" id="tab-dagskra">
+    <div class="card">
+      <h2>Dagskrá</h2>
+
+      <div class="day-block">
+        <h3>Miðvikudagur 1. júlí</h3>
+        <div class="sched-item"><span class="time">10:30</span><span>Afhending mótsgagna hefst</span></div>
+        <div class="sched-item"><span class="time">12:00</span><span>Fyrstu leikir hefjast</span></div>
+        <div class="sched-item"><span class="time">17:00-20:00</span><span>Kvöldmatur</span></div>
+        <div class="sched-item"><span class="time">21:30</span><span>Síðustu leikjum lýkur</span></div>
+        <div class="sched-item"><span class="time">22:30</span><span>Fararstjórafundur í KA-heimilinu</span></div>
+      </div>
+
+      <div class="day-block">
+        <h3>Fimmtudagur 2. júlí</h3>
+        <div class="sched-item"><span class="time">07:00-09:30</span><span>Morgunverður</span></div>
+        <div class="sched-item"><span class="time">08:30</span><span>Fyrstu leikir hefjast</span></div>
+        <div class="sched-item"><span class="time">11:30-14:00</span><span>Hádegismatur</span></div>
+        <div class="sched-item"><span class="time">17:00-20:00</span><span>Kvöldmatur</span></div>
+        <div class="sched-item"><span class="time">19:00</span><span>Síðustu leikjum lýkur</span></div>
+        <div class="sched-item"><span class="time">21:00</span><span>Fararstjórafundur í KA-heimilinu</span></div>
+      </div>
+
+      <div class="day-block">
+        <h3>Föstudagur 3. júlí</h3>
+        <div class="sched-item"><span class="time">07:00-09:30</span><span>Morgunverður</span></div>
+        <div class="sched-item"><span class="time">08:30</span><span>Fyrstu leikir hefjast</span></div>
+        <div class="sched-item"><span class="time">11:30-14:00</span><span>Hádegismatur</span></div>
+        <div class="sched-item"><span class="time">17:00-20:00</span><span>Kvöldmatur</span></div>
+        <div class="sched-item"><span class="time">19:55</span><span>Síðustu leikjum lýkur</span></div>
+        <div class="sched-item"><span class="time">20:30</span><span>Kvöldskemmtun í Höllinni</span></div>
+      </div>
+
+      <div class="day-block">
+        <h3>Laugardagur 4. júlí</h3>
+        <div class="sched-item"><span class="time">07:00-09:30</span><span>Morgunverður</span></div>
+        <div class="sched-item"><span class="time">08:00</span><span>Fyrstu leikir hefjast</span></div>
+        <div class="sched-item"><span class="time">11:30-14:00</span><span>Hádegismatur</span></div>
+        <div class="sched-item"><span class="time">16:30</span><span>Úrslitaleikjum lýkur</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- VELLIR TAB -->
+  <div class="tab-panel" id="tab-vellir">
+    <div class="card">
+      <h2>KA-svæðið</h2>
+      <img src="https://www.n1motid.is/cdn/media/N1motid_Vellir_SocialVef_V1080x1440a.png?v=1782163434" alt="KA-svæðið kort">
+      <p class="caption">12 vellir, keppni fram alla mótsdagana. Allir úrslitaleikir á laugardegi leiknir hér. Matsalur í íþróttasal KA-heimilisins.</p>
+    </div>
+    <div class="card">
+      <h2>Akureyrarvöllur</h2>
+      <img src="https://www.n1motid.is/cdn/media/N1motid_Vellir_SocialVef_V1080x1440b.png?v=1782163441" alt="Akureyrarvöllur kort">
+      <p class="caption">Vellir 13-16, forkeppni á miðvikudeginum.</p>
+    </div>
+    <div class="card">
+      <h2>Bílastæði</h2>
+      <img src="https://www.n1motid.is/cdn/media/N1motid_Bilastaedakort_A4_V2.png?v=1782819844" alt="Bílastæðakort">
+      <p class="caption">Dalsbraut verður einstefnugata meðan á mótinu stendur.</p>
+    </div>
   </div>
 
 </div>
+
+<script>
+  document.querySelectorAll('.tab-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+      document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+</script>
+
 </body>
 </html>
