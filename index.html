@@ -141,6 +141,49 @@
     color: #555;
     margin: 0 0 16px;
 }
+.merged-item {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-size: 13px;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+    line-height: 1.35;
+}
+.merged-item:last-child { border-bottom: none; }
+.merged-item .mi-time {
+    font-weight: 700;
+    white-space: nowrap;
+    min-width: 44px;
+}
+.merged-item .mi-body { flex: 1; }
+.merged-item .mi-team {
+    font-weight: 700;
+    color: #203a43;
+}
+.merged-item .mi-pitch {
+    color: #777;
+    font-size: 12px;
+}
+.live-badge {
+    display: inline-block;
+    background: #e63946;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+.team-sched-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #203a43;
+    margin: 0 0 8px;
+}
 </style>
 </head>
 <body>
@@ -151,6 +194,7 @@
   </header>
   <div class="tabs">
     <button class="tab-btn active" data-tab="leikir">Leikir</button>
+    <button class="tab-btn" data-tab="hin">Hin liðin</button>
     <button class="tab-btn" data-tab="matsedill">Matseðill</button>
     <button class="tab-btn" data-tab="dagskra">Dagskrá</button>
     <button class="tab-btn" data-tab="vellir">Vellir</button>
@@ -239,6 +283,105 @@
       <h2>Riðlastaða</h2>
       <div style='width:100%'><script charset='utf-8' src='https://n1motid.torneopal.com/taso/widget.php?competition=320_0013&class=G2024&group=3&widget=scoretable'></script></div>
     </div>
+  </div>
+  <!-- HIN LIÐIN TAB -->
+  <div class="tab-panel" id="tab-hin">
+    <div class="card">
+      <h2>Leikir framundan - hin liðin</h2>
+      <div id="mergedMatches"><p class="meal">Leita að leikjum...</p></div>
+    </div>
+    <div class="card">
+      <p class="team-sched-label">ÍR 1</p>
+      <div style='width:100%' id="schedule173204"><script charset='utf-8' src='https://n1motid.torneopal.com/taso/widget.php?teamid=173204&widget=schedule'></script></div>
+    </div>
+    <div class="card">
+      <p class="team-sched-label">ÍR 2</p>
+      <div style='width:100%' id="schedule173240"><script charset='utf-8' src='https://n1motid.torneopal.com/taso/widget.php?teamid=173240&widget=schedule'></script></div>
+    </div>
+    <div class="card">
+      <p class="team-sched-label">ÍR 4</p>
+      <div style='width:100%' id="schedule173314"><script charset='utf-8' src='https://n1motid.torneopal.com/taso/widget.php?teamid=173314&widget=schedule'></script></div>
+    </div>
+    <script>
+    (function() {
+      var OTHER_TEAMS = [
+        { id: '173204', name: 'ÍR 1' },
+        { id: '173240', name: 'ÍR 2' },
+        { id: '173314', name: 'ÍR 4' }
+      ];
+      var GRACE_MS = 30 * 60 * 1000; // keep a match listed 30 min after kickoff
+
+      function parseMerged() {
+        var anyTable = false;
+        var all = [];
+        var now = new Date();
+        OTHER_TEAMS.forEach(function(team) {
+          var rows = document.querySelectorAll('#schedule' + team.id + ' table.scheduletable tbody tr');
+          if (rows.length) anyTable = true;
+          rows.forEach(function(row) {
+            var dateEl = row.querySelector('td.date');
+            var timeEl = row.querySelector('td.time');
+            var homeEl = row.querySelector('td.home');
+            var awayEl = row.querySelector('td.away');
+            var pitchEl = row.querySelector('td.pitch');
+            if (!dateEl || !timeEl) return;
+            var dateMatch = dateEl.textContent.trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+            var timeMatch = timeEl.textContent.trim().match(/^(\d{1,2}):(\d{2})$/);
+            if (!dateMatch || !timeMatch) return;
+            var kickoff = new Date(
+              parseInt(dateMatch[3], 10),
+              parseInt(dateMatch[2], 10) - 1,
+              parseInt(dateMatch[1], 10),
+              parseInt(timeMatch[1], 10),
+              parseInt(timeMatch[2], 10)
+            );
+            if (kickoff.getTime() < now.getTime() - GRACE_MS) return;
+            all.push({
+              team: team.name,
+              kickoff: kickoff,
+              home: homeEl ? homeEl.textContent.trim() : '',
+              away: awayEl ? awayEl.textContent.trim() : '',
+              pitch: pitchEl ? pitchEl.textContent.trim() : ''
+            });
+          });
+        });
+        if (!anyTable) return false;
+        all.sort(function(a, b) { return a.kickoff - b.kickoff; });
+        var container = document.getElementById('mergedMatches');
+        if (!all.length) {
+          container.innerHTML = '<p class="meal">Engir leikir framundan hjá hinum liðunum.</p>';
+          return true;
+        }
+        var html = '';
+        all.forEach(function(m) {
+          var hh = String(m.kickoff.getHours()).padStart(2, '0');
+          var min = String(m.kickoff.getMinutes()).padStart(2, '0');
+          var isLive = now.getTime() >= m.kickoff.getTime();
+          var liveBadge = isLive ? '<span class="live-badge">Í gangi</span>' : '';
+          var pitch = m.pitch ? ' <span class="mi-pitch">· ' + m.pitch + '</span>' : '';
+          html += '<div class="merged-item">'
+                +   '<span class="mi-time">' + hh + ':' + min + '</span>'
+                +   '<span class="mi-body">'
+                +     '<span class="mi-team">' + m.team + '</span>' + liveBadge + '<br>'
+                +     m.home + ' - ' + m.away + pitch
+                +   '</span>'
+                + '</div>';
+        });
+        container.innerHTML = html;
+        return true;
+      }
+
+      if (!parseMerged()) {
+        var attempts = 0;
+        var interval = setInterval(function() {
+          attempts++;
+          if (parseMerged() || attempts > 100) clearInterval(interval);
+        }, 200);
+      }
+      // refresh live/upcoming split and the 30-min window each minute
+      setInterval(parseMerged, 60 * 1000);
+    })();
+    </script>
   </div>
   <!-- MATSEÐILL TAB -->
   <div class="tab-panel" id="tab-matsedill">
